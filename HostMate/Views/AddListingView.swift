@@ -62,7 +62,7 @@ struct LocationSearchField: View {
     var body: some View {
         VStack(alignment: .leading) {
             TextField("Enter city or address", text: $locationVM.query)
-                .textFieldStyle(.roundedBorder)
+                
 
             if !locationVM.results.isEmpty {
                 List(locationVM.results, id: \.self) { completion in
