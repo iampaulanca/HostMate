@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		787F42CB2E7A6F1A009DE59E /* VibesEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 787F42CA2E7A6F1A009DE59E /* VibesEditorView.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		785C7DBF2E44574300E26403 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +31,7 @@
 		785C7DAD2E44574100E26403 /* HostMate.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HostMate.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		785C7DBE2E44574300E26403 /* HostMateTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HostMateTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		785C7DC82E44574300E26403 /* HostMateUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HostMateUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		787F42CA2E7A6F1A009DE59E /* VibesEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VibesEditorView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -88,6 +93,7 @@
 		785C7DA42E44574100E26403 = {
 			isa = PBXGroup;
 			children = (
+				787F42CA2E7A6F1A009DE59E /* VibesEditorView.swift */,
 				785C7DAF2E44574100E26403 /* HostMate */,
 				785C7DC12E44574300E26403 /* HostMateTests */,
 				785C7DCB2E44574300E26403 /* HostMateUITests */,
@@ -249,6 +255,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				787F42CB2E7A6F1A009DE59E /* VibesEditorView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

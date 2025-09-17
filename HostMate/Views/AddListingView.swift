@@ -74,16 +74,39 @@ enum PropertyType: String, CaseIterable, Identifiable {
 struct AddListingView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.presentationMode) var presentationMode
-    @ObservedObject var viewModel: ListingsViewModel
+    var viewModel: ListingsViewModel?
     @State var name: String = ""
     @State var propertyType: String = ""
     @State private var selectedPropertyType: PropertyType? = nil
+    var editingListing: Listing? = nil
+
+    @State private var vibeItems: [String] = []
+    @State private var amenityItems: [String] = []
+    @State private var targetGuestItems: [String] = []
+
     @State var vibe: String = ""
     @State var amenities: String = ""
     @State var targetGuests: String = ""
     
     @ObservedObject var locationVM: LocationSearchViewModel
     @State var selectedLocation: String
+    
+    init(viewModel: ListingsViewModel? = nil, locationVM: LocationSearchViewModel, selectedLocation: String = "", editingListing: Listing? = nil) {
+        self.viewModel = viewModel
+        self.locationVM = locationVM
+        self._selectedLocation = State(initialValue: selectedLocation)
+        self.editingListing = editingListing
+        // Prefill from editing listing if provided
+        if let listing = editingListing {
+            self._name = State(initialValue: listing.name)
+            self._propertyType = State(initialValue: listing.propertyType)
+            self._selectedPropertyType = State(initialValue: PropertyType.allCases.first { $0.displayName == listing.propertyType })
+            self._vibeItems = State(initialValue: listing.vibe)
+            self._amenityItems = State(initialValue: listing.amenities)
+            self._targetGuestItems = State(initialValue: listing.targetGuests)
+            self._selectedLocation = State(initialValue: listing.location)
+        }
+    }
     
     func disabled() -> Bool {
         name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
@@ -116,28 +139,73 @@ struct AddListingView: View {
             Section(header: Text("Location")) {
                 LocationSearchField(locationVM: locationVM, selectedLocation: $selectedLocation)
             }
-            Section(header: Text("Vibe (comma separated)")) {
-                TextField("e.g. Cozy, Modern", text: $vibe)
+            Section(header: Text("Vibe")) {
+                HStack {
+                    Text("\(vibeItems.count) selected")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    NavigationLink("Manage") {
+                        VibeEditorView(vibes: $vibeItems)
+                    }
+                }
             }
-            Section(header: Text("Amenities (comma separated)")) {
-                TextField("e.g. WiFi, Hot Tub", text: $amenities)
+            Section(header: Text("Amenities")) {
+                HStack {
+                    Text("\(amenityItems.count) selected")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    NavigationLink("Manage") {
+                        AmenitiesEditorView(amenities: $amenityItems)
+                    }
+                }
             }
-            Section(header: Text("Target Guests (comma separated)")) {
-                TextField("e.g. Families, Remote Workers", text: $targetGuests)
+            Section(header: Text("Target Guests")) {
+                HStack {
+                    Text("\(targetGuestItems.count) selected")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    NavigationLink("Manage") {
+                        GuestsEditorView(guests: $targetGuestItems)
+                    }
+                }
             }
+//            Section(header: Text("Vibe (comma separated)")) {
+//                TextField("e.g. Cozy, Modern", text: $vibe)
+//            }
+//            Section(header: Text("Amenities (comma separated)")) {
+//                TextField("e.g. WiFi, Hot Tub", text: $amenities)
+//            }
+//            Section(header: Text("Target Guests (comma separated)")) {
+//                TextField("e.g. Families, Remote Workers", text: $targetGuests)
+//            }
+            
+            
             Section {
                 Button(action: {
                     // Ensure propertyType string mirrors selection for persistence
                     self.propertyType = selectedPropertyType?.displayName ?? self.propertyType
-                    let newListing = Listing(
-                        name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-                        propertyType: propertyType.trimmingCharacters(in: .whitespacesAndNewlines),
-                        location: selectedLocation.trimmingCharacters(in: .whitespacesAndNewlines),
-                        vibe: vibe.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty },
-                        amenities: amenities.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty },
-                        targetGuests: targetGuests.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
-                    )
-                    viewModel.addListing(newListing)
+
+                    if let listing = editingListing {
+                        // Update existing listing
+                        listing.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                        listing.propertyType = propertyType.trimmingCharacters(in: .whitespacesAndNewlines)
+                        listing.location = selectedLocation.trimmingCharacters(in: .whitespacesAndNewlines)
+                        listing.vibe = vibeItems
+                        listing.amenities = amenityItems
+                        listing.targetGuests = targetGuestItems
+                        listing.lastUpdated = Date()
+                    } else {
+                        // Create new listing
+                        let newListing = Listing(
+                            name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+                            propertyType: propertyType.trimmingCharacters(in: .whitespacesAndNewlines),
+                            location: selectedLocation.trimmingCharacters(in: .whitespacesAndNewlines),
+                            vibe: vibeItems,
+                            amenities: amenityItems,
+                            targetGuests: targetGuestItems
+                        )
+                        viewModel?.addListing(newListing)
+                    }
                     presentationMode.wrappedValue.dismiss()
                 }) {
                     Text("Save")
@@ -157,3 +225,142 @@ struct AddListingView: View {
 //    AddListingView(viewModel: .init(modelContext: model.mainContext))
 }
 
+
+private struct AmenitiesEditorView: View {
+    @Binding var amenities: [String]
+    @State private var draft = ""
+    private let suggestions = ["Wi‑Fi", "Parking", "Kitchen", "Washer", "Dryer", "Air conditioning", "Heating", "TV", "Pool", "Hot tub"]
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        List {
+            Section("Current") {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 8)], spacing: 8) {
+                    ForEach(amenities, id: \.self) { a in
+                        Chip(text: a, removable: true) {
+                            amenities.removeAll { $0 == a }
+                        }
+                        .gridCellAnchor(.leading)
+                    }
+                }
+                .listRowInsets(EdgeInsets())
+                .padding(.vertical, 8)
+            }
+            Section("Add") {
+                HStack {
+                    TextField("Add amenity…", text: $draft)
+                        .onSubmit(addDraft)
+                    Button("Add") { addDraft() }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            Section("Suggestions") {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(suggestions, id: \.self) { s in
+                            Button {
+                                if !amenities.contains(s) { amenities.append(s) }
+                            } label: {
+                                Chip(text: s)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+        .navigationTitle("Edit Amenities")
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
+    }
+
+    private func addDraft() {
+        let t = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return }
+        if !amenities.contains(t) { amenities.append(t) }
+        draft = ""
+    }
+}
+
+struct GuestsEditorView: View {
+    @Binding var guests: [String]
+    @State private var draft = ""
+    private let suggestions = ["Families", "Remote workers", "Couples", "Pet owners", "Business travelers", "Long-term stays"]
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        List {
+            Section("Current") {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 8)], spacing: 8) {
+                    ForEach(guests, id: \.self) { g in
+                        Chip(text: g, removable: true) {
+                            guests.removeAll { $0 == g }
+                        }
+                        .gridCellAnchor(.leading)
+                    }
+                }
+                .listRowInsets(EdgeInsets())
+                .padding(.vertical, 8)
+            }
+            Section("Add") {
+                HStack {
+                    TextField("Add target guest…", text: $draft)
+                        .onSubmit(addDraft)
+                    Button("Add") { addDraft() }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            Section("Suggestions") {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(suggestions, id: \.self) { s in
+                            Button {
+                                if !guests.contains(s) { guests.append(s) }
+                            } label: {
+                                Chip(text: s)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+        .navigationTitle("Edit Target Guests")
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
+    }
+
+    private func addDraft() {
+        let t = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return }
+        if !guests.contains(t) { guests.append(t) }
+        draft = ""
+    }
+}
+
+// Lightweight chip reused by editors
+struct Chip: View {
+    let text: String
+    var removable: Bool = false
+    var onRemove: (() -> Void)? = nil
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text(text)
+                .font(.footnote)
+            if removable, let onRemove {
+                Button(action: onRemove) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.footnote)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Remove \(text)")
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.thinMaterial, in: Capsule())
+    }
+}

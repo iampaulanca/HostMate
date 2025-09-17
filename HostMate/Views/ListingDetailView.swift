@@ -10,6 +10,7 @@ import SwiftUI
 
 struct ListingDetailView: View {
     @ObservedObject var listing: Listing
+    @State private var showingEdit = false
 
     var body: some View {
         ScrollView {
@@ -120,6 +121,21 @@ struct ListingDetailView: View {
         }
         .navigationTitle("Listing Details")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Edit") { showingEdit = true }
+            }
+        }
+        .sheet(isPresented: $showingEdit) {
+            NavigationStack {
+                AddListingView(
+                    viewModel: nil,
+                    locationVM: LocationSearchViewModel(),
+                    selectedLocation: listing.location,
+                    editingListing: listing
+                )
+            }
+        }
     }
 
     // MARK: - Helpers
