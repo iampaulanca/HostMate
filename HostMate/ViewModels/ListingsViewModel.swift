@@ -39,6 +39,12 @@ class ListingsViewModel: ObservableObject {
         fetchListings()
     }
 
+    func update(_ listing: Listing) {
+        // Listing is already managed; just save changes and refresh.
+        try? modelContext.save()
+        fetchListings()
+    }
+
     func loadDemoData() {
         let demoListings = [
             Listing(name: "Cozy Tahoe Cabin", propertyType: "Cabin", location: "South Lake Tahoe, CA"),

@@ -72,25 +72,25 @@ enum PropertyType: String, CaseIterable, Identifiable {
 }
 
 struct AddListingView: View {
+    @ObservedObject var locationVM: LocationSearchViewModel
+   
     @Environment(\.modelContext) private var modelContext
     @Environment(\.presentationMode) var presentationMode
-    var viewModel: ListingsViewModel?
+    
     @State var name: String = ""
     @State var propertyType: String = ""
     @State private var selectedPropertyType: PropertyType? = nil
-    var editingListing: Listing? = nil
-
     @State private var vibeItems: [String] = []
     @State private var amenityItems: [String] = []
     @State private var targetGuestItems: [String] = []
-
     @State var vibe: String = ""
     @State var amenities: String = ""
     @State var targetGuests: String = ""
-    
-    @ObservedObject var locationVM: LocationSearchViewModel
     @State var selectedLocation: String
     
+    var editingListing: Listing? = nil
+    var viewModel: ListingsViewModel?
+   
     init(viewModel: ListingsViewModel? = nil, locationVM: LocationSearchViewModel, selectedLocation: String = "", editingListing: Listing? = nil) {
         self.viewModel = viewModel
         self.locationVM = locationVM
@@ -169,17 +169,7 @@ struct AddListingView: View {
                     }
                 }
             }
-//            Section(header: Text("Vibe (comma separated)")) {
-//                TextField("e.g. Cozy, Modern", text: $vibe)
-//            }
-//            Section(header: Text("Amenities (comma separated)")) {
-//                TextField("e.g. WiFi, Hot Tub", text: $amenities)
-//            }
-//            Section(header: Text("Target Guests (comma separated)")) {
-//                TextField("e.g. Families, Remote Workers", text: $targetGuests)
-//            }
-            
-            
+
             Section {
                 Button(action: {
                     // Ensure propertyType string mirrors selection for persistence
@@ -194,6 +184,7 @@ struct AddListingView: View {
                         listing.amenities = amenityItems
                         listing.targetGuests = targetGuestItems
                         listing.lastUpdated = Date()
+                        viewModel?.update(listing)
                     } else {
                         // Create new listing
                         let newListing = Listing(
@@ -226,7 +217,7 @@ struct AddListingView: View {
 }
 
 
-private struct AmenitiesEditorView: View {
+struct AmenitiesEditorView: View {
     @Binding var amenities: [String]
     @State private var draft = ""
     private let suggestions = ["Wi‑Fi", "Parking", "Kitchen", "Washer", "Dryer", "Air conditioning", "Heating", "TV", "Pool", "Hot tub"]
@@ -364,3 +355,4 @@ struct Chip: View {
         .background(.thinMaterial, in: Capsule())
     }
 }
+
