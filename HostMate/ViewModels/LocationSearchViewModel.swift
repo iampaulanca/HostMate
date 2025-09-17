@@ -5,6 +5,9 @@
 //  Created by Paul Ancajima on 9/7/25.
 //
 
+import Foundation
+import MapKit
+import Combine
 
 class LocationSearchViewModel: NSObject, ObservableObject {
     @Published var query = ""

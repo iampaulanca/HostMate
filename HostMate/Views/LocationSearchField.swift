@@ -1,3 +1,12 @@
+//
+//  LocationSearchField.swift
+//  HostMate
+//
+//  Created by Paul Ancajima on 9/7/25.
+//
+
+import SwiftUI
+
 struct LocationSearchField: View {
     @ObservedObject var locationVM: LocationSearchViewModel
     @Binding var selectedLocation: String
@@ -5,8 +14,6 @@ struct LocationSearchField: View {
     var body: some View {
         VStack(alignment: .leading) {
             TextField("Enter city or address", text: $locationVM.query)
-                
-
             if !locationVM.results.isEmpty {
                 List(locationVM.results, id: \.self) { completion in
                     VStack(alignment: .leading) {

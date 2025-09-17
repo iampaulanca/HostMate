@@ -9,80 +9,64 @@
 import SwiftUI
 import SwiftData
 
-import MapKit
-import Combine
+enum PropertyType: String, CaseIterable, Identifiable {
+    case apartment
+    case house
+    case guesthouse
+    case bedAndBreakfast
+    case boutiqueHotel
+    case cabin
+    case chalet
+    case cottage
+    case condo
+    case loft
+    case townhouse
+    case villa
+    case tinyHome
+    case farmStay
+    case dome
+    case hut
+    case cabinBoat
+    case treehouse
+    case yurt
+    case camperRV
+    case tent
+    case castle
+    case ryokan
+    case riad
+    case cave
+    case lighthouse
 
-class LocationSearchViewModel: NSObject, ObservableObject {
-    @Published var query = ""
-    @Published var results: [MKLocalSearchCompletion] = []
-    // used to remove results list on select
-    @Published var didSelect: Bool = false
-    private var completer = MKLocalSearchCompleter()
-    private var cancellables = Set<AnyCancellable>()
+    var id: String { rawValue }
 
-    override init() {
-        super.init()
-        completer.resultTypes = .address
-        completer.region = MKCoordinateRegion(.world) // optional: constrain to certain area
-
-        // Listen to search completer updates
-        completer.delegate = self
-
-        // Update completer as query changes
-        $query
-          .removeDuplicates()
-          .debounce(for: .milliseconds(300), scheduler: RunLoop.main)
-          .sink { [weak self] newValue in
-            guard let self else { return }
-            if self.didSelect {
-              self.results = []
-              self.didSelect = false
-            } else {
-              self.completer.queryFragment = newValue
-            }
-          }
-          .store(in: &cancellables)
-    }
-}
-
-extension LocationSearchViewModel: MKLocalSearchCompleterDelegate {
-    func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
-        self.results = completer.results
-    }
-
-    func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
-        print("Autocomplete error: \(error.localizedDescription)")
-    }
-}
-
-struct LocationSearchField: View {
-    @ObservedObject var locationVM: LocationSearchViewModel
-    @Binding var selectedLocation: String
-
-    var body: some View {
-        VStack(alignment: .leading) {
-            TextField("Enter city or address", text: $locationVM.query)
-                
-
-            if !locationVM.results.isEmpty {
-                List(locationVM.results, id: \.self) { completion in
-                    VStack(alignment: .leading) {
-                        Text(completion.title).bold()
-                        if !completion.subtitle.isEmpty {
-                            Text(completion.subtitle)
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                    .onTapGesture {
-                        selectedLocation = completion.title
-                        locationVM.query = completion.title
-                        locationVM.didSelect = true
-                    }
-                }
-                .frame(maxHeight: 100) // limit height
-            }
+    var displayName: String {
+        switch self {
+        case .apartment: return "Apartment"
+        case .house: return "House"
+        case .guesthouse: return "Guesthouse"
+        case .bedAndBreakfast: return "Bed & Breakfast"
+        case .boutiqueHotel: return "Boutique hotel"
+        case .cabin: return "Cabin"
+        case .chalet: return "Chalet"
+        case .cottage: return "Cottage"
+        case .condo: return "Condominium"
+        case .loft: return "Loft"
+        case .townhouse: return "Townhouse"
+        case .villa: return "Villa"
+        case .tinyHome: return "Tiny home"
+        case .farmStay: return "Farm stay"
+        case .dome: return "Dome"
+        case .hut: return "Hut"
+        case .cabinBoat: return "Houseboat"
+        case .treehouse: return "Treehouse"
+        case .yurt: return "Yurt"
+        case .camperRV: return "Camper/RV"
+        case .tent: return "Tent"
+        case .castle: return "Castle"
+        case .ryokan: return "Ryokan"
+        case .riad: return "Riad"
+        case .cave: return "Cave"
+        case .lighthouse: return "Lighthouse"
         }
     }
 }
@@ -93,7 +77,7 @@ struct AddListingView: View {
     @ObservedObject var viewModel: ListingsViewModel
     @State var name: String = ""
     @State var propertyType: String = ""
-    @State var location: String = ""
+    @State private var selectedPropertyType: PropertyType? = nil
     @State var vibe: String = ""
     @State var amenities: String = ""
     @State var targetGuests: String = ""
@@ -103,8 +87,8 @@ struct AddListingView: View {
     
     func disabled() -> Bool {
         name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-        propertyType.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-        location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        selectedPropertyType == nil ||
+        selectedLocation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     var body: some View {
         Form {
@@ -112,10 +96,24 @@ struct AddListingView: View {
                 TextField("Name", text: $name)
             }
             Section(header: Text("Property Type")) {
-                TextField("Property Type", text: $propertyType)
+                Picker("", selection: Binding(
+                    get: { selectedPropertyType },
+                    set: { newValue in
+                        selectedPropertyType = newValue
+                        propertyType = newValue?.displayName ?? ""
+                    }
+                )) {
+                    Text("Select a type").tag(Optional<PropertyType>.none)
+                    ForEach(PropertyType.allCases) { type in
+                        Text(type.displayName).tag(Optional(type))
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .offset(x: -10)
             }
+            
             Section(header: Text("Location")) {
-//                TextField("Location", text: $location)
                 LocationSearchField(locationVM: locationVM, selectedLocation: $selectedLocation)
             }
             Section(header: Text("Vibe (comma separated)")) {
@@ -129,10 +127,12 @@ struct AddListingView: View {
             }
             Section {
                 Button(action: {
+                    // Ensure propertyType string mirrors selection for persistence
+                    self.propertyType = selectedPropertyType?.displayName ?? self.propertyType
                     let newListing = Listing(
                         name: name.trimmingCharacters(in: .whitespacesAndNewlines),
                         propertyType: propertyType.trimmingCharacters(in: .whitespacesAndNewlines),
-                        location: location.trimmingCharacters(in: .whitespacesAndNewlines),
+                        location: selectedLocation.trimmingCharacters(in: .whitespacesAndNewlines),
                         vibe: vibe.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty },
                         amenities: amenities.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty },
                         targetGuests: targetGuests.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
@@ -156,3 +156,4 @@ struct AddListingView: View {
 //    let model: ModelContainer = try! .init(for: Listing.self, configurations: config)
 //    AddListingView(viewModel: .init(modelContext: model.mainContext))
 }
+
